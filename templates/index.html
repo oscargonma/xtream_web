@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>IPTV Flask</title>
+
+  <!-- HLS.js para reproducir .m3u8 -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <!-- Enlaza tu CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="layout-container">
+    <!-- Columna izquierda: lista de canales -->
+    <div class="sidebar" id="channelList">
+      <div class="loading">Cargando canales...</div>
+    </div>
+
+    <!-- Columna derecha: reproductor de video -->
+    <div class="player-container">
+      <video id="player" controls></video>
+    </div>
+  </div>
+
+  <script>
+async function cargarCanales() {
+  const lista = document.getElementById("channelList");
+  lista.innerHTML = "<div class='loading'>🔄 Cargando canales...</div>";
+
+  try {
+    const res = await fetch("/load_channels");
+    const canales = await res.json();
+    lista.innerHTML = "";
+
+    if (canales.error) {
+      lista.innerHTML = "<div class='error'>❌ Error al cargar canales</div>";
+      console.error(canales.error);
+      return;
+    }
+
+    canales.forEach((canal) => {
+      const item = document.createElement("div");
+      item.className = "canal";
+      item.textContent = canal.name;
+
+      item.onclick = () => {
+        mostrarPublicidadYReproducir(canal.url);
+
+        // Detiene stream anterior
+        if (window.currentHls) {
+          window.currentHls.destroy();
+        }
+
+        if (Hls.isSupported()) {
+          const hls = new Hls();
+          hls.loadSource(canal.url);
+          hls.attachMedia(video);
+          window.currentHls = hls;
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = canal.url;
+        }
+
+        video.play();
+      };
+
+      lista.appendChild(item);
+    });
+  } catch (error) {
+    lista.innerHTML = "<div class='error'>❌ Error al cargar canales</div>";
+    console.error("❌ Error cargando canales:", error);
+  }
+}
+
+window.onload = cargarCanales;
+
+function mostrarPublicidadYReproducir(url) {
+  const adContainer = document.getElementById("ad-container");
+  const countdownSpan = document.getElementById("countdown");
+  const video = document.getElementById("player");
+
+  // Pausa el video mientras espera
+  video.pause();
+
+  // Muestra el contenedor
+  adContainer.style.display = "flex";
+
+  // Carga el script de Adsterra dinámicamente
+  const script = document.createElement("script");
+  script.src = "//pl26390543.profitableratecpm.com/3b03a984b59a15c64413cc1988de4211/invoke.js";
+  script.async = true;
+  script.setAttribute("data-cfasync", "false");
+
+  // Asegura que el div donde Adsterra inyecta el anuncio esté vacío
+  const adContent = document.getElementById("ad-content");
+  adContent.innerHTML = '<div id="container-3b03a984b59a15c64413cc1988de4211"></div>';
+  adContent.appendChild(script);
+
+  // Cuenta regresiva
+  let segundos = 10;
+  countdownSpan.textContent = segundos;
+  const intervalo = setInterval(() => {
+    segundos--;
+    countdownSpan.textContent = segundos;
+    if (segundos <= 0) {
+      clearInterval(intervalo);
+      adContainer.style.display = "none";
+      reproducirCanal(url);
+    }
+  }, 1000);
+}
+
+function reproducirCanal(url) {
+  const video = document.getElementById("player");
+
+  if (window.currentHls) {
+    window.currentHls.destroy();
+  }
+
+  if (Hls.isSupported()) {
+    const hls = new Hls();
+    hls.loadSource(url);
+    hls.attachMedia(video);
+    window.currentHls = hls;
+  } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+    video.src = url;
+  }
+
+  video.play();
+}
+
+</script>
+
+<div id="ad-container">
+  <div id="ad-content">
+    <div id="container-3b03a984b59a15c64413cc1988de4211"></div>
+  </div>
+  <p>El canal se cargará en <span id="countdown">10</span> segundos...</p>
+</div>
+
+
+
+
+
+</body>
+</html>
+

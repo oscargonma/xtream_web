@@ -1,0 +1,167 @@
+/* reset básico */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Fuente y colores generales */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #091418;
+  color: #afb8bd;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Contenedor principal: dos columnas en desktop, una en móvil */
+.layout-container {
+  display: flex;
+  width: 95%;
+  max-width: 1200px;
+  height: 90vh;
+  border: 2px solid #142d33;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+/* Estilos para la columna izquierda (lista de canales) */
+.sidebar {
+  flex: 0 0 30%;
+  background-color: #0d1d21;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+/* Mensajes de estado */
+.loading,
+.error {
+  text-align: center;
+  margin-top: 20px;
+  color: #ccc;
+}
+
+/* Cada canal se muestra como un bloque clickable */
+.canal {
+  background-color: #0a171a;
+  border: 1px solid #142d33;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.canal:hover {
+  background-color: #0ff;
+  color: #000;
+  border-color: #142d33;
+}
+
+/* Estilos para la columna derecha (reproductor) */
+.player-container {
+  flex: 0 0 70%;
+  background-color: #0a171a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+/* El video ocupa todo el contenedor derecho con padding */
+.player-container video {
+  width: 95%;
+  height: auto;
+  max-height: 85vh;
+  border: 2px solid #142d33;
+  border-radius: 6px;
+  background-color: #0a171a;
+}
+
+
+
+
+#ad-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.95);
+  color: white;
+  z-index: 9999;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  overflow: auto;
+}
+
+#ad-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 20px;
+  overflow-x: auto;
+  max-width: 100%;
+  width: 100%;
+}
+
+#ad-content > div[id^="container-"] {
+  display: flex !important;
+  gap: 15px;
+  width: auto;
+}
+
+#ad-content a {
+  flex: 0 0 auto;
+  display: block;
+  max-width: 300px;
+  border-radius: 10px;
+  overflow: hidden;
+  text-decoration: none;
+}
+
+#ad-content img {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  display: block;
+}
+
+/* Cuenta regresiva */
+#ad-container p {
+  margin-top: 20px;
+  font-size: 1.2rem;
+  color: #0ff;
+  text-align: center;
+}
+
+@media screen and (max-width: 768px) and (orientation: portrait) {
+  body::before {
+    content: "🔁 Por favor gira tu dispositivo para ver correctamente los canales";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #091418;
+    padding: 20px 30px;
+    font-size: 18px;
+    color: #afb8bd;
+    z-index: 9999;
+    border: 2px solid #142d33;
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  .layout-container {
+    display: none;
+  }
+}
