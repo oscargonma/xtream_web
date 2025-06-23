@@ -4,38 +4,16 @@ import requests
 
 app = Flask(__name__)
 
-USERNAME = "zuly77rtvuy"
-PASSWORD = "FZAUN"
-BASE_URL = "http://maxcuentas.lat:8080"
+@app.route("/canal_24_7")
+def canal_24_7():
+    with open("/home/tatiana2006/mysite/programacion.json", "r", encoding="utf-8") as f:
+        videos = json.load(f)
+        server_time = int(time.time())
+    return render_template("canal.html", videos=videos,server_time=server_time)
 
-def obtener_canales_desde_xtream():
-    url = f"{BASE_URL}/player_api.php?username={USERNAME}&password={PASSWORD}&action=get_live_streams"
-    respuesta = requests.get(url)
-    datos = respuesta.json()
-    
-    canales = []
-    for canal in datos:
-        canales.append({
-            "name": canal["name"],
-            "url": f"{BASE_URL}/live/{USERNAME}/{PASSWORD}/{canal['stream_id']}.m3u8"
-        })
-    return canales
-
-
-@app.route('/')
-def index():
-    return render_template("index.html")
-
-
-
-@app.route("/load_channels")
-def load_channels():
-    try:
-        canales = obtener_canales_desde_xtream()
-        return jsonify(canales)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
+@app.route('/canales_24_7')
+def canales_24_7():
+    return render_template('index.html')
 
 if __name__ == '__main__':
     import os
