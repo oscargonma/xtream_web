@@ -9,11 +9,9 @@ def canal_24_7():
     with open("/home/tatiana2006/mysite/programacion.json", "r", encoding="utf-8") as f:
         videos = json.load(f)
         server_time = int(time.time())
-    return render_template("canal.html", videos=videos,server_time=server_time)
+    return render_template("index.html", videos=videos,server_time=server_time)
 
-@app.route('/canales_24_7')
-def canales_24_7():
-    return render_template('index.html')
+
 
 if __name__ == '__main__':
     import os
