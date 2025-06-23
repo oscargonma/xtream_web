@@ -1,147 +1,231 @@
-<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>IPTV Flask</title>
+  <meta charset="UTF-8">
+  <title>Canal 24/7</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #000;
+      color: white;
+      height: 100%;
+      width: 100%;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
 
-  <!-- HLS.js para reproducir .m3u8 -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <!-- Enlaza tu CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    #playerContainer {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 720px;
+    }
+
+    video {
+      width: 100%;
+      background-color: black;
+      border-radius: 10px;
+      pointer-events: auto; /* ✅ Permite tocar el video */
+    }
+
+    #startBtn {
+      display: none;
+      background-color: #e50914;
+      border: none;
+      color: white;
+      padding: 15px 30px;
+      font-size: 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    #liveLabel {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background-color: red;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 14px;
+      z-index: 2;
+    }
+
+    #customControls {
+      margin-top: 10px;
+    }
+
+    #fullscreenBtn {
+      background-color: #444;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #adContainer {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    #countdownMessage {
+      font-size: 18px;
+      margin-top: 20px;
+    }
+
+    h2#videoTitle {
+      margin: 10px 0;
+      font-size: 22px;
+      color: #e50914;
+    }
+
+    @media screen and (max-width: 600px) {
+      video {
+        width: 100%;
+      }
+      #fullscreenBtn, #startBtn {
+        font-size: 14px;
+        padding: 10px 20px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="layout-container">
-    <!-- Columna izquierda: lista de canales -->
-    <div class="sidebar" id="channelList">
-      <div class="loading">Cargando canales...</div>
-    </div>
 
-    <!-- Columna derecha: reproductor de video -->
-    <div class="player-container">
-      <video id="player" controls></video>
+  <div id="adContainer">
+    <!-- Tu anuncio aquí -->
+    <script async="async" data-cfasync="false" src="//pl26390543.profitableratecpm.com/3b03a984b59a15c64413cc1988de4211/invoke.js"></script>
+    <div id="container-3b03a984b59a15c64413cc1988de4211"></div>
+  </div>
+
+  <div id="countdownMessage">El canal se activará en <span id="countdown">10</span> segundos...</div>
+
+  <button id="startBtn">Dale Click Para Ver El Canal</button>
+
+  <div id="playerContainer">
+    <div id="liveLabel">EN VIVO</div>
+    <h2 id="videoTitle"></h2>
+    <h3 id="nextVideoTitle"></h3>
+    <video id="videoPlayer" playsinline autoplay></video>
+    <div id="customControls">
+      <button id="fullscreenBtn">Dale play para ver en pantalla completa</button>
     </div>
   </div>
 
   <script>
-async function cargarCanales() {
-  const lista = document.getElementById("channelList");
-  lista.innerHTML = "<div class='loading'>🔄 Cargando canales...</div>";
+    const videoList = {{ videos | tojson }};
+    const serverTime = {{ server_time }};
+    const totalDuration = videoList.reduce((sum, v) => sum + v.duration, 0);
 
-  try {
-    const res = await fetch("/load_channels");
-    const canales = await res.json();
-    lista.innerHTML = "";
+    function getPlaybackInfo() {
+      const now = serverTime;
+      const elapsed = now % totalDuration;
 
-    if (canales.error) {
-      lista.innerHTML = "<div class='error'>❌ Error al cargar canales</div>";
-      console.error(canales.error);
-      return;
+      let acc = 0;
+      for (let i = 0; i < videoList.length; i++) {
+        if (elapsed < acc + videoList[i].duration) {
+          return { index: i, offset: elapsed - acc };
+        }
+        acc += videoList[i].duration;
+      }
+      return { index: 0, offset: 0 };
     }
 
-    canales.forEach((canal) => {
-      const item = document.createElement("div");
-      item.className = "canal";
-      item.textContent = canal.name;
+    function playFrom(index, offset) {
+      const video = document.getElementById("videoPlayer");
+      const title = document.getElementById("videoTitle");
+      const current = videoList[index];
 
-      item.onclick = () => {
-        mostrarPublicidadYReproducir(canal.url);
+      video.src = current.src;
+      title.textContent = `🎬 Estás Viendo=> ${current.title || "Transmisión"}`;
+      const nextIndex = (index + 1) % videoList.length;
+      const nextVideo = videoList[nextIndex];
 
-        // Detiene stream anterior
-        if (window.currentHls) {
-          window.currentHls.destroy();
+      // Tiempo restante hasta que termine el actual
+      const remaining = current.duration - offset;
+
+      // Mostrar título y tiempo restante
+      document.getElementById("nextVideoTitle").textContent =
+  `🔜 Sigue=> ${nextVideo.title} en ${formatTime(remaining)}`;
+
+
+      video.load();
+      video.onloadedmetadata = () => {
+        try {
+          video.currentTime = offset;
+        } catch (e) {
+          console.log("Error al ajustar tiempo:", e);
         }
-
-        if (Hls.isSupported()) {
-          const hls = new Hls();
-          hls.loadSource(canal.url);
-          hls.attachMedia(video);
-          window.currentHls = hls;
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-          video.src = canal.url;
-        }
-
-        video.play();
+        video.play().catch(err => console.log("Error al reproducir:", err));
       };
+      if (window.nextVideoTimer) clearInterval(window.nextVideoTimer);
 
-      lista.appendChild(item);
-    });
-  } catch (error) {
-    lista.innerHTML = "<div class='error'>❌ Error al cargar canales</div>";
-    console.error("❌ Error cargando canales:", error);
-  }
-}
+      window.nextVideoTimer = setInterval(() => {
+        const timeLeft = current.duration - video.currentTime;
+        document.getElementById("nextVideoTitle").textContent =
+          `🔜 Sigue: ${nextVideo.title} en ${formatTime(timeLeft)}`;
+      }, 1000);
 
-window.onload = cargarCanales;
 
-function mostrarPublicidadYReproducir(url) {
-  const adContainer = document.getElementById("ad-container");
-  const countdownSpan = document.getElementById("countdown");
-  const video = document.getElementById("player");
-
-  // Pausa el video mientras espera
-  video.pause();
-
-  // Muestra el contenedor
-  adContainer.style.display = "flex";
-
-  // Carga el script de Adsterra dinámicamente
-  const script = document.createElement("script");
-  script.src = "//pl26390543.profitableratecpm.com/3b03a984b59a15c64413cc1988de4211/invoke.js";
-  script.async = true;
-  script.setAttribute("data-cfasync", "false");
-
-  // Asegura que el div donde Adsterra inyecta el anuncio esté vacío
-  const adContent = document.getElementById("ad-content");
-  adContent.innerHTML = '<div id="container-3b03a984b59a15c64413cc1988de4211"></div>';
-  adContent.appendChild(script);
-
-  // Cuenta regresiva
-  let segundos = 10;
-  countdownSpan.textContent = segundos;
-  const intervalo = setInterval(() => {
-    segundos--;
-    countdownSpan.textContent = segundos;
-    if (segundos <= 0) {
-      clearInterval(intervalo);
-      adContainer.style.display = "none";
-      reproducirCanal(url);
+      video.onended = () => {
+        const next = (index + 1) % videoList.length;
+        playFrom(next, 0);
+      };
     }
-  }, 1000);
+
+    function formatTime(seconds) {
+  const hrs = String(Math.floor(seconds / 3600)).padStart(2, '0');
+  const mins = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+  const secs = String(Math.floor(seconds % 60)).padStart(2, '0');
+  return `${hrs}:${mins}:${secs}`;
 }
 
-function reproducirCanal(url) {
-  const video = document.getElementById("player");
 
-  if (window.currentHls) {
-    window.currentHls.destroy();
+    // Contador regresivo de 10s
+    let seconds = 10;
+    const countdownEl = document.getElementById("countdown");
+    const countdownMsg = document.getElementById("countdownMessage");
+
+    const timer = setInterval(() => {
+      seconds--;
+      countdownEl.textContent = seconds;
+      if (seconds <= 0) {
+        clearInterval(timer);
+        countdownMsg.style.display = "none";
+        document.getElementById("adContainer").style.display = "none";
+        document.getElementById("startBtn").style.display = "inline-block";
+      }
+    }, 1000);
+
+    document.getElementById("startBtn").addEventListener("click", () => {
+      document.getElementById("startBtn").style.display = "none";
+      document.getElementById("playerContainer").style.display = "flex";
+      const { index, offset } = getPlaybackInfo();
+      playFrom(index, offset);
+    });
+
+    document.getElementById("fullscreenBtn").addEventListener("click", () => {
+  const video = document.getElementById("videoPlayer");
+
+  if (video.webkitEnterFullscreen) {
+    video.webkitEnterFullscreen(); // iOS Safari
+  } else if (video.requestFullscreen) {
+    video.requestFullscreen();     // Android / navegadores modernos
   }
-
-  if (Hls.isSupported()) {
-    const hls = new Hls();
-    hls.loadSource(url);
-    hls.attachMedia(video);
-    window.currentHls = hls;
-  } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-    video.src = url;
-  }
-
-  video.play();
-}
-
-</script>
-
-<div id="ad-container">
-  <div id="ad-content">
-    <div id="container-3b03a984b59a15c64413cc1988de4211"></div>
-  </div>
-  <p>El canal se cargará en <span id="countdown">10</span> segundos...</p>
-</div>
-
-
-
-
+});
+  </script>
 
 </body>
 </html>
-
